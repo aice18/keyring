@@ -160,8 +160,12 @@ export function setupRoutes(app: Express, io: any) {
   });
 
   // Reset database endpoint
-  app.post('/api/auth/reset-db', async (req, res) => {
+  app.post('/api/auth/reset-db', authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
+      const currentUser = req.user!;
+      if (currentUser.role !== 'parent') {
+        return res.status(403).json({ message: 'Only parents can reset the workspace.' });
+      }
       await db.reset();
       return res.json({ success: true, message: 'Database reset successfully' });
     } catch (err: any) {

@@ -13,8 +13,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Enable CORS for frontend interactions
+const CLIENT_URL = process.env.CLIENT_URL || '*';
 app.use(cors({
-  origin: '*',
+  origin: CLIENT_URL,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -35,7 +36,7 @@ async function startServer() {
     const server = http.createServer(app);
     const io = new Server(server, {
       cors: {
-        origin: '*',
+        origin: CLIENT_URL,
         methods: ['GET', 'POST']
       }
     });

@@ -3,24 +3,28 @@
 
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --color-cherry: #5C162E;
-  --color-cherry-light: #8A2444;
-  --color-cherry-dark: #3A0D1D;
-  --color-vanilla: #FDFBF7;
-  --color-vanilla-dark: #F0EBE1;
+  --color-cherry: #8B0B19;
+  --color-cherry-light: #B91C2E;
+  --color-cherry-dark: #4A040B;
+  --color-vanilla: #FBF4EA;
+  --color-vanilla-dark: #F0E4D3;
+  --color-gold: #D4AF37;
+  --color-gold-light: #E5C158;
 }
 
 :root {
   font-family: var(--font-sans);
   background-color: var(--color-vanilla);
   color: var(--color-cherry-dark);
+  font-size: 18px;
 }
 
 body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background-color: var(--color-vanilla);
+  background: radial-gradient(circle at top center, var(--color-vanilla), #F5EAE0);
+  background-attachment: fixed;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -56,4 +60,19 @@ input:focus, select:focus, textarea:focus {
 /* Stripe/Linear style subtle border lines */
 .border-divider {
   border-color: var(--color-vanilla-dark);
+}
+
+/* Toast slide-in animation */
+@keyframes slideInRight {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.animate-toast {
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
