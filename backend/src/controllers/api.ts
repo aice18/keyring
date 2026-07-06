@@ -173,6 +173,30 @@ export function setupRoutes(app: Express, io: any) {
     }
   });
 
+  // Switch identity within the family (sandbox helper)
+  app.post('/api/auth/switch-identity', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const currentUser = req.user!;
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required.' });
+      }
+
+      const targetUser = await db.users.findOne({ email, familyId: currentUser.familyId });
+      if (!targetUser) {
+        return res.status(404).json({ message: 'Target family member not found.' });
+      }
+
+      const token = targetUser._id.toString();
+      return res.json({
+        token,
+        user: { id: targetUser._id, name: targetUser.name, email: targetUser.email, role: targetUser.role, familyId: targetUser.familyId }
+      });
+    } catch (err: any) {
+      return res.status(500).json({ message: err.message });
+    }
+  });
+
   // ----------------------------------------------------
   // GRANT ROUTES
   // ----------------------------------------------------

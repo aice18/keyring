@@ -306,7 +306,7 @@ export default function App() {
       }
       localStorage.setItem('lastIp', currentIp);
     } else {
-      testBackendSeed();
+      setIsLoading(false);
     }
   }, []);
 
@@ -634,10 +634,13 @@ export default function App() {
   const handleSwitchUser = async (email: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      const res = await fetch(`${BACKEND_URL}/api/auth/switch-identity`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: 'password123' })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ email })
       });
       const data = await res.json();
       if (res.ok) {
@@ -646,6 +649,8 @@ export default function App() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         await loadAllData(data.token);
+      } else {
+        alert(data.message || 'Error switching user');
       }
     } catch (e) {
       alert('Error switching user');
@@ -1281,13 +1286,7 @@ export default function App() {
 
           <div className="space-y-1 border-t border-vanilla-dark/80 pt-2.5">
             <span className="text-[12px] font-bold text-zinc-700 uppercase tracking-wider block mb-1.5">Switch Identity:</span>
-            {[
-              { email: 'jo@example.com', name: 'Jo (Parent)' },
-              { email: 'priya@example.com', name: 'Priya (Delegate)' },
-              { email: 'sam@example.com', name: 'Sam (Co-signer)' },
-              { email: 'sarah@example.com', name: 'Sarah (Co-signer)' },
-              { email: 'henderson@example.com', name: 'Mr. Henderson (Advisor)' }
-            ].map(u => (
+            {familyMembers.map(u => (
               <button
                 key={u.email}
                 onClick={() => handleSwitchUser(u.email)}
@@ -1298,7 +1297,7 @@ export default function App() {
                     : 'text-cherry-light hover:text-cherry-dark hover:bg-white'
                 }`}
               >
-                {u.name}
+                {u.name} ({u.role === 'co_signer' ? 'Co-signer' : u.role === 'advisor' ? 'Advisor' : u.role.charAt(0).toUpperCase() + u.role.slice(1)})
               </button>
             ))}
           </div>
