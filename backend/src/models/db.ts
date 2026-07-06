@@ -11,13 +11,6 @@ import {
 // Let's declare our flag for mock database fallback
 export let isMockDatabase = false;
 
-// Dynamic import of MongoMemoryServer to handle setup without crash
-let MongoMemoryServer: any = null;
-try {
-  MongoMemoryServer = require('mongodb-memory-server').MongoMemoryServer;
-} catch (e) {
-  console.warn('[DB SETUP] mongodb-memory-server is not available. Fallback to full mock mode will be used if real mongo fails.');
-}
 
 // ----------------------------------------------------
 // MONGOOSE SCHEMA DEFINITIONS
@@ -121,7 +114,7 @@ const generateId = () => Math.random().toString(36).substring(2, 15) + Math.rand
 // DATABASE INITIALIZATION
 // ----------------------------------------------------
 export async function connectDB(): Promise<void> {
-  const mongoUri = process.env.MONGO_URI;
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 
   if (mongoUri) {
     try {
@@ -131,32 +124,12 @@ export async function connectDB(): Promise<void> {
       initMongooseModels();
       return;
     } catch (err) {
-      console.error('[DB] Failed to connect to MONGO_URI. Trying fallback...', err);
+      console.error('[DB] Failed to connect to MONGO_URI.', err);
+      throw err;
     }
   }
 
-  // Try MongoMemoryServer fallback
-  if (MongoMemoryServer) {
-    try {
-      console.log('[DB] Starting MongoDB Memory Server fallback...');
-      const mongoServer = await MongoMemoryServer.create();
-      const uri = mongoServer.getUri();
-      await mongoose.connect(uri);
-      console.log('[DB] Connected to MongoDB Memory Server successfully.');
-      initMongooseModels();
-      return;
-    } catch (err) {
-      console.error('[DB] Failed to start MongoDB Memory Server. Falling back to clean Mock Memory Database...', err);
-    }
-  }
-
-  // Fallback to memory array mock
-  console.warn('[DB] ---------------------------------------------------------------');
-  console.warn('[DB] WARNING: Using fully in-memory mock database array fallback!');
-  console.warn('[DB] All data will be lost when the server restarts.');
-  console.warn('[DB] ---------------------------------------------------------------');
-  isMockDatabase = true;
-  seedMockData();
+  throw new Error('[DB] MONGO_URI or MONGODB_URI is not defined in environment variables.');
 }
 
 function initMongooseModels() {

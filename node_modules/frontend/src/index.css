@@ -3,19 +3,24 @@
 
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-cherry: #5C162E;
+  --color-cherry-light: #8A2444;
+  --color-cherry-dark: #3A0D1D;
+  --color-vanilla: #FDFBF7;
+  --color-vanilla-dark: #F0EBE1;
 }
 
 :root {
   font-family: var(--font-sans);
-  background-color: #09090b; /* zinc-950 */
-  color: #fafafa; /* zinc-50 */
+  background-color: var(--color-vanilla);
+  color: var(--color-cherry-dark);
 }
 
 body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background-color: #09090b;
+  background-color: var(--color-vanilla);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -27,19 +32,19 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: var(--color-vanilla);
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a; /* zinc-800 */
+  background: var(--color-vanilla-dark);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46; /* zinc-700 */
+  background: var(--color-cherry-light);
 }
 
 /* Minimal input and button focus states */
 input:focus, select:focus, textarea:focus {
-  outline: 2px solid #3f3f46;
+  outline: 2px solid var(--color-cherry-light);
   outline-offset: -1px;
 }
 
@@ -50,5 +55,5 @@ input:focus, select:focus, textarea:focus {
 
 /* Stripe/Linear style subtle border lines */
 .border-divider {
-  border-color: #27272a;
+  border-color: var(--color-vanilla-dark);
 }

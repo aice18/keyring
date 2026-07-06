@@ -110,6 +110,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
 
+  // Modals for UX flow
+  const [showGetStarted, setShowGetStarted] = useState<boolean>(false);
+  const [showIpAlert, setShowIpAlert] = useState<boolean>(false);
+
   // Core Data States
   const [grants, setGrants] = useState<Grant[]>([]);
   const [escalations, setEscalations] = useState<EscalationRequest[]>([]);
@@ -125,7 +129,7 @@ export default function App() {
     status: 'approved' | 'denied' | 'idle';
     message: string;
     details?: string;
-  }>({ status: 'idle', message: 'Ready. Guardian Agent actively inspecting requests.' });
+  }>({ status: 'idle', message: 'Ready. Safety Checker actively inspecting requests.' });
 
   // Creation forms states
   const [showCreateGrant, setShowCreateGrant] = useState(false);
@@ -238,7 +242,7 @@ export default function App() {
       });
       try {
         const synth = window.speechSynthesis;
-        const utter = new SpeechSynthesisUtterance("Access Denied: Guardian Agent blocked the transaction.");
+        const utter = new SpeechSynthesisUtterance("Access Denied: Safety Checker blocked the transaction.");
         utter.rate = 1.0;
         synth.speak(utter);
       } catch (e) {}
@@ -262,11 +266,23 @@ export default function App() {
     const savedToken = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
 
+    const hasSeenGetStarted = localStorage.getItem('hasSeenGetStarted');
+    const lastIp = localStorage.getItem('lastIp');
+    const currentIp = "192.168.1.100"; // Simulated current IP
+
     if (savedToken && savedUser) {
       setToken(savedToken);
       const parsedUser = JSON.parse(savedUser);
       setCurrentUser(parsedUser);
       loadAllData(savedToken);
+      
+      if (!hasSeenGetStarted) {
+        setShowGetStarted(true);
+      }
+      if (lastIp && lastIp !== currentIp) {
+        setShowIpAlert(true);
+      }
+      localStorage.setItem('lastIp', currentIp);
     } else {
       testBackendSeed();
     }
@@ -294,6 +310,11 @@ export default function App() {
         localStorage.setItem('user', JSON.stringify(data.user));
         setIsDemoInitialized(true);
         loadAllData(data.token);
+        
+        if (!localStorage.getItem('hasSeenGetStarted')) {
+          setShowGetStarted(true);
+        }
+        localStorage.setItem('lastIp', '192.168.1.100');
       } else {
         setIsLoading(false);
       }
@@ -392,6 +413,9 @@ export default function App() {
         setIsDemoInitialized(true);
         setShowOnboardingForm(false);
         await loadAllData(data.token);
+        
+        setShowGetStarted(true);
+        localStorage.setItem('lastIp', '192.168.1.100');
       } else {
         alert(data.message || 'Custom setup failed.');
       }
@@ -886,22 +910,22 @@ export default function App() {
   const getDomainIcon = (domain: string) => {
     switch (domain) {
       case 'financial':
-        return <DollarSign className="w-4 h-4 text-zinc-400" />;
+        return <DollarSign className="w-4 h-4 text-cherry-light" />;
       case 'medical':
-        return <HeartPulse className="w-4 h-4 text-zinc-400" />;
+        return <HeartPulse className="w-4 h-4 text-cherry-light" />;
       case 'household':
-        return <Home className="w-4 h-4 text-zinc-400" />;
+        return <Home className="w-4 h-4 text-cherry-light" />;
       case 'insurance':
-        return <Briefcase className="w-4 h-4 text-zinc-400" />;
+        return <Briefcase className="w-4 h-4 text-cherry-light" />;
       default:
-        return <Shield className="w-4 h-4 text-zinc-400" />;
+        return <Shield className="w-4 h-4 text-cherry-light" />;
     }
   };
 
   const getScopeBadge = (scope: string) => {
     switch (scope) {
       case 'view_only':
-        return <span className="px-2 py-0.5 text-[10px] font-medium border border-zinc-800 bg-zinc-900 text-zinc-300 rounded">View Only</span>;
+        return <span className="px-2 py-0.5 text-[10px] font-medium border border-vanilla-dark bg-white text-cherry-light rounded">View Only</span>;
       case 'pay_bills':
         return <span className="px-2 py-0.5 text-[10px] font-medium border border-blue-900/30 bg-blue-950/20 text-blue-400 rounded">Pay Bills</span>;
       case 'full_manage':
@@ -914,37 +938,37 @@ export default function App() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <span className="px-2 py-0.5 text-[10px] font-medium border border-emerald-900/30 bg-emerald-950/20 text-emerald-400 rounded">Active</span>;
+        return <span className="px-2 py-0.5 text-[10px] font-medium border border-emerald-900/30 bg-emerald-950/20 text-cherry rounded">Active</span>;
       case 'revoked':
         return <span className="px-2 py-0.5 text-[10px] font-medium border border-red-900/30 bg-red-950/20 text-red-400 rounded">Revoked</span>;
       case 'expired':
-        return <span className="px-2 py-0.5 text-[10px] font-medium border border-zinc-800 bg-zinc-900 text-zinc-500 rounded">Expired</span>;
+        return <span className="px-2 py-0.5 text-[10px] font-medium border border-vanilla-dark bg-white text-zinc-500 rounded">Expired</span>;
       case 'escalation_pending':
-        return <span className="px-2 py-0.5 text-[10px] font-medium border border-amber-900/30 bg-amber-950/20 text-amber-400 rounded">Escalating</span>;
+        return <span className="px-2 py-0.5 text-[10px] font-medium border border-amber-900/30 bg-amber-950/20 text-cherry-light rounded">Escalating</span>;
       default:
-        return <span className="px-2 py-0.5 text-[10px] font-medium border border-zinc-800 bg-zinc-900 text-zinc-400 rounded">{status}</span>;
+        return <span className="px-2 py-0.5 text-[10px] font-medium border border-vanilla-dark bg-white text-cherry-light rounded">{status}</span>;
     }
   };
 
   const getMemberName = (id: string) => {
     const mem = familyMembers.find(f => f.id === id);
-    return mem ? mem.name : id === 'SYSTEM' ? 'System Chain Guard' : 'Unknown';
+    return mem ? mem.name : id === 'SYSTEM' ? 'System Security' : 'Unknown';
   };
 
   if (!isDemoInitialized) {
     if (showOnboardingForm) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-zinc-950 py-12">
-          <div className="w-full max-w-lg border border-zinc-800 bg-zinc-900/40 p-6 md:p-8 rounded-2xl backdrop-blur-md">
-            <div className="flex items-center gap-3 mb-6 border-b border-zinc-800 pb-4">
-              <Shield className="w-6 h-6 text-zinc-100" />
-              <h2 className="text-lg font-bold text-zinc-100 font-heading">Configure Family Oversight</h2>
+        <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-vanilla py-12">
+          <div className="w-full max-w-lg border border-vanilla-dark bg-white/40 p-6 md:p-8 rounded-2xl backdrop-blur-md">
+            <div className="flex items-center gap-3 mb-6 border-b border-vanilla-dark pb-4">
+              <Shield className="w-6 h-6 text-cherry-dark" />
+              <h2 className="text-lg font-bold text-cherry-dark font-heading">Configure Family Oversight</h2>
             </div>
 
-            <form onSubmit={handleCustomSetup} className="space-y-4">
+            <form onSubmit={handleCustomSetup} className="space-y-6">
               {/* Section 1: Family Info */}
               <div className="space-y-3">
-                <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">1. Family Details</h3>
+                <h3 className="text-[10px] font-bold text-cherry-light uppercase tracking-wider">1. Family Details</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Family name</label>
@@ -952,7 +976,7 @@ export default function App() {
                       type="text"
                       value={onboardingFamilyName}
                       onChange={e => setOnboardingFamilyName(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                      className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                       required
                     />
                   </div>
@@ -964,7 +988,7 @@ export default function App() {
                       max="10"
                       value={onboardingQuorum}
                       onChange={e => setOnboardingQuorum(Number(e.target.value))}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                      className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                       required
                     />
                   </div>
@@ -973,7 +997,7 @@ export default function App() {
 
               {/* Section 2: Parent details */}
               <div className="space-y-3 pt-2">
-                <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">2. Primary Account Owner (Parent)</h3>
+                <h3 className="text-[10px] font-bold text-cherry-light uppercase tracking-wider">2. Primary Account Owner (Parent)</h3>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-1">
                     <label className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Parent Name</label>
@@ -982,7 +1006,7 @@ export default function App() {
                       placeholder="e.g. Jo"
                       value={onboardingParentName}
                       onChange={e => setOnboardingParentName(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                      className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                       required
                     />
                   </div>
@@ -993,7 +1017,7 @@ export default function App() {
                       placeholder="jo@example.com"
                       value={onboardingParentEmail}
                       onChange={e => setOnboardingParentEmail(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                      className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                       required
                     />
                   </div>
@@ -1003,7 +1027,7 @@ export default function App() {
                       type="password"
                       value={onboardingParentPassword}
                       onChange={e => setOnboardingParentPassword(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                      className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                       required
                     />
                   </div>
@@ -1013,11 +1037,11 @@ export default function App() {
               {/* Section 3: Delegates & Co-signers */}
               <div className="space-y-3 pt-2">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">3. Family Members & Roles</h3>
+                  <h3 className="text-[10px] font-bold text-cherry-light uppercase tracking-wider">3. Family Members & Roles</h3>
                   <button
                     type="button"
                     onClick={() => setOnboardingMembers([...onboardingMembers, { name: '', email: '', role: 'delegate' }])}
-                    className="text-[10px] text-zinc-400 hover:text-zinc-200 flex items-center gap-1 cursor-pointer font-bold"
+                    className="text-[10px] text-cherry-light hover:text-zinc-200 flex items-center gap-1 cursor-pointer font-bold"
                   >
                     <Plus className="w-3 h-3" /> Add Member
                   </button>
@@ -1025,7 +1049,7 @@ export default function App() {
 
                 <div className="max-h-48 overflow-y-auto space-y-2.5 pr-1">
                   {onboardingMembers.map((m, idx) => (
-                    <div key={idx} className="flex gap-2.5 items-end bg-zinc-950/40 p-2.5 border border-zinc-800 rounded-lg">
+                    <div key={idx} className="flex gap-2.5 items-end bg-vanilla/40 p-2.5 border border-vanilla-dark rounded-2xl">
                       <div className="flex-1">
                         <label className="block text-[8px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Name</label>
                         <input
@@ -1037,7 +1061,7 @@ export default function App() {
                             newM[idx].name = e.target.value;
                             setOnboardingMembers(newM);
                           }}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded p-1.5 text-xs text-cherry-light"
                           required
                         />
                       </div>
@@ -1052,7 +1076,7 @@ export default function App() {
                             newM[idx].email = e.target.value;
                             setOnboardingMembers(newM);
                           }}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded p-1.5 text-xs text-cherry-light"
                           required
                         />
                       </div>
@@ -1065,7 +1089,7 @@ export default function App() {
                             newM[idx].role = e.target.value as any;
                             setOnboardingMembers(newM);
                           }}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded p-1.5 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded p-1.5 text-xs text-cherry-light"
                         >
                           <option value="delegate">Delegate</option>
                           <option value="co_signer">Co-signer</option>
@@ -1089,14 +1113,14 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setShowOnboardingForm(false)}
-                  className="flex-1 py-2.5 px-4 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-medium rounded-lg text-xs cursor-pointer transition-clean"
+                  className="flex-1 py-2.5 px-4 bg-white hover:bg-vanilla-dark border border-vanilla-dark text-cherry-light font-medium rounded-2xl text-xs cursor-pointer transition-clean"
                 >
                   Back to Quick Launch
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="flex-1 py-2.5 px-4 text-zinc-950 font-bold bg-zinc-50 hover:bg-zinc-200 disabled:opacity-50 rounded-lg text-xs cursor-pointer transition-clean flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 px-4 text-zinc-950 font-bold bg-zinc-50 hover:bg-zinc-200 disabled:opacity-50 rounded-2xl text-xs cursor-pointer transition-clean flex items-center justify-center gap-1.5"
                 >
                   {isLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Initialize Family'}
                 </button>
@@ -1108,14 +1132,14 @@ export default function App() {
     }
 
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-zinc-950">
-        <div className="w-full max-w-md border border-zinc-800 bg-zinc-900/50 p-8 rounded-2xl text-center space-y-6">
-          <div className="inline-flex p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
-            <Shield className="w-10 h-10 text-zinc-100" />
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-vanilla">
+        <div className="w-full max-w-md border border-vanilla-dark bg-white/50 p-8 rounded-2xl text-center space-y-6">
+          <div className="inline-flex p-3.5 rounded-2xl bg-white border border-vanilla-dark shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+            <Shield className="w-10 h-10 text-cherry-dark" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold font-heading text-zinc-100 mb-1">KeyRing</h1>
-            <p className="text-zinc-400 text-xs max-w-sm mx-auto leading-relaxed">
+            <h1 className="text-2xl font-bold font-heading text-cherry-dark mb-1">KeyRing</h1>
+            <p className="text-cherry-light text-xs max-w-sm mx-auto leading-relaxed">
               Scoped, Time-Boxed Delegation layer for aging-parent financial & medical account oversight.
             </p>
           </div>
@@ -1124,7 +1148,7 @@ export default function App() {
             <button
               onClick={handleInitializeDemo}
               disabled={isLoading}
-              className="w-full py-3 px-4 text-zinc-950 font-semibold rounded-lg bg-zinc-50 hover:bg-zinc-200 transition-clean flex items-center justify-center gap-2 cursor-pointer text-xs"
+              className="w-full py-3 px-4 text-zinc-950 font-semibold rounded-2xl bg-zinc-50 hover:bg-zinc-200 transition-clean flex items-center justify-center gap-2 cursor-pointer text-xs"
             >
               {isLoading ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1143,7 +1167,7 @@ export default function App() {
                 setShowOnboardingForm(true);
               }}
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-semibold rounded-lg transition-clean flex items-center justify-center gap-2 cursor-pointer text-xs"
+              className="w-full py-3 px-4 bg-white hover:bg-vanilla-dark border border-vanilla-dark text-cherry-light font-semibold rounded-2xl transition-clean flex items-center justify-center gap-2 cursor-pointer text-xs"
             >
               <span>Configure Custom Family Group</span>
             </button>
@@ -1177,15 +1201,15 @@ export default function App() {
   const flaggedAnomalies = auditLogs.filter(log => (log as any).isAnomaly);
 
   return (
-    <div className="min-h-screen flex bg-zinc-950 text-zinc-50 font-sans">
+    <div className="min-h-screen flex bg-vanilla text-zinc-50 font-sans">
       
       {/* 1. LEFT SIDEBAR */}
-      <aside className="w-64 border-r border-zinc-800 bg-zinc-950 flex flex-col justify-between flex-shrink-0">
+      <aside className="w-64 border-r border-vanilla-dark bg-vanilla flex flex-col justify-between flex-shrink-0">
         <div className="flex flex-col">
           {/* Logo / Header */}
-          <div className="h-14 border-b border-zinc-800 px-6 flex items-center gap-2.5">
-            <Shield className="w-5 h-5 text-zinc-100" />
-            <span className="font-bold text-sm tracking-tight font-heading text-zinc-100">KeyRing</span>
+          <div className="h-14 border-b border-vanilla-dark px-6 flex items-center gap-2.5">
+            <Shield className="w-5 h-5 text-cherry-dark" />
+            <span className="font-bold text-sm tracking-tight font-heading text-cherry-dark">KeyRing</span>
           </div>
 
           {/* Navigation Link List */}
@@ -1204,8 +1228,8 @@ export default function App() {
                 onClick={() => setActiveTab(item.id as TabType)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-clean cursor-pointer ${
                   activeTab === item.id
-                    ? 'bg-zinc-800 text-zinc-100'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+                    ? 'bg-vanilla-dark text-cherry-dark'
+                    : 'text-cherry-light hover:text-zinc-200 hover:bg-white'
                 }`}
               >
                 {item.icon}
@@ -1216,9 +1240,9 @@ export default function App() {
         </div>
 
         {/* User Workspace Profile Switcher at bottom */}
-        <div className="p-4 border-t border-zinc-800 bg-zinc-900/30">
+        <div className="p-6 border-t border-vanilla-dark bg-white/30">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-200">
+            <div className="w-7 h-7 rounded-full bg-vanilla-dark border border-cherry-light/20 flex items-center justify-center text-xs font-bold text-zinc-200">
               {currentUser?.name[0]}
             </div>
             <div className="overflow-hidden">
@@ -1227,7 +1251,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="space-y-1 border-t border-zinc-800/80 pt-2.5">
+          <div className="space-y-1 border-t border-vanilla-dark/80 pt-2.5">
             <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-1.5">Switch Identity:</span>
             {[
               { email: 'jo@example.com', name: 'Jo (Parent)' },
@@ -1242,8 +1266,8 @@ export default function App() {
                 disabled={currentUser?.email === u.email}
                 className={`w-full text-left px-2 py-1 rounded text-[11px] font-medium transition-clean cursor-pointer block ${
                   currentUser?.email === u.email
-                    ? 'text-zinc-500 font-bold bg-zinc-900/50'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+                    ? 'text-zinc-500 font-bold bg-white/50'
+                    : 'text-cherry-light hover:text-zinc-200 hover:bg-white'
                 }`}
               >
                 {u.name}
@@ -1257,21 +1281,21 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* TOP BAR HEADER */}
-        <header className="h-14 border-b border-zinc-800 px-6 flex items-center justify-between flex-shrink-0 bg-zinc-950">
-          <div className="flex items-center gap-2 text-xs text-zinc-400">
-            <span className="font-semibold text-zinc-300">Oversight Workspace</span>
+        <header className="h-14 border-b border-vanilla-dark px-6 flex items-center justify-between flex-shrink-0 bg-vanilla">
+          <div className="flex items-center gap-2 text-xs text-cherry-light">
+            <span className="font-semibold text-cherry-light">Oversight Workspace</span>
             <ChevronRight className="w-3.5 h-3.5 text-zinc-600" />
             <span className="capitalize">{activeTab}</span>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-[10px] text-zinc-400 font-mono">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-vanilla-dark shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 rounded-2xl text-[10px] text-cherry-light font-mono">
               <Database className="w-3 h-3 text-zinc-500" />
               <span>In-Memory sandbox DB</span>
             </div>
             <button
               onClick={handleResetWorkspace}
-              className="px-2.5 py-1 bg-red-950/20 hover:bg-red-900/30 border border-red-500/20 text-red-400 hover:text-red-300 rounded-lg text-[10px] font-semibold cursor-pointer transition-clean flex items-center gap-1"
+              className="px-2.5 py-1 bg-red-950/20 hover:bg-red-900/30 border border-red-500/20 text-red-400 hover:text-red-300 rounded-2xl text-[10px] font-semibold cursor-pointer transition-clean flex items-center gap-1"
             >
               Reset Workspace
             </button>
@@ -1288,19 +1312,19 @@ export default function App() {
             {currentUser?.role !== 'delegate' && urgentExpiringGrants.map(ug => {
               const hoursLeft = Math.max(1, Math.round((new Date(ug.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
               return (
-                <div key={ug._id} className="p-4 bg-amber-950/20 border border-amber-500/30 rounded-xl flex items-center justify-between gap-4 text-xs text-amber-400 font-sans">
+                <div key={ug._id} className="p-6 bg-amber-950/20 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-6 text-xs text-cherry-light font-sans">
                   <div className="flex items-center gap-2.5">
                     <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 animate-pulse" />
                     <div>
                       <h4 className="font-bold text-amber-200">Upcoming Delegation Expiration</h4>
-                      <p className="text-zinc-400 mt-0.5">
+                      <p className="text-cherry-light mt-0.5">
                         {getMemberName(ug.delegateId)}'s delegation grant for domain <strong>{ug.domain}</strong> expires in {hoursLeft} hours.
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => handleRenewGrant(ug._id)}
-                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-450 text-zinc-950 font-bold rounded-lg transition-clean cursor-pointer whitespace-nowrap"
+                    className="px-3 py-1.5 bg-cherry/50 hover:bg-amber-450 text-zinc-950 font-bold rounded-2xl transition-clean cursor-pointer whitespace-nowrap"
                   >
                     Renew for 30 Days
                   </button>
@@ -1312,49 +1336,49 @@ export default function App() {
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-zinc-100 tracking-tight">Oversight Dashboard</h2>
-                  <p className="text-xs text-zinc-400 mt-1">Review active oversight boundaries and verify cryptographic audit trails.</p>
+                  <h2 className="text-xl font-semibold text-cherry-dark tracking-tight">Family Dashboard</h2>
+                  <p className="text-xs text-cherry-light mt-1">Review active oversight boundaries and verify cryptographic audit trails.</p>
                 </div>
 
                 {/* Quick Stats Grid */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="border border-zinc-800 bg-zinc-900/20 p-4 rounded-xl">
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="border border-vanilla-dark bg-white/20 p-6 rounded-2xl">
                     <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Active Grants</span>
-                    <span className="text-xl font-bold text-zinc-100 mt-1.5 block">{grants.filter(g => g.status === 'active').length}</span>
+                    <span className="text-2xl font-bold tracking-tight text-cherry-dark text-cherry-dark mt-1.5 block">{grants.filter(g => g.status === 'active').length}</span>
                   </div>
-                  <div className="border border-zinc-800 bg-zinc-900/20 p-4 rounded-xl">
+                  <div className="border border-vanilla-dark bg-white/20 p-6 rounded-2xl">
                     <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Pending Votes</span>
-                    <span className="text-xl font-bold text-zinc-100 mt-1.5 block">{escalations.filter(e => e.status === 'pending').length}</span>
+                    <span className="text-2xl font-bold tracking-tight text-cherry-dark text-cherry-dark mt-1.5 block">{escalations.filter(e => e.status === 'pending').length}</span>
                   </div>
-                  <div className="border border-zinc-800 bg-zinc-900/20 p-4 rounded-xl">
-                    <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Integrous Blocks</span>
-                    <span className="text-xl font-bold text-zinc-100 mt-1.5 block">{auditLogs.length}</span>
+                  <div className="border border-vanilla-dark bg-white/20 p-6 rounded-2xl">
+                    <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider block">Logged Events</span>
+                    <span className="text-2xl font-bold tracking-tight text-cherry-dark text-cherry-dark mt-1.5 block">{auditLogs.length}</span>
                   </div>
                 </div>
 
                 {/* Security & Spending Digest (Parent / Co-signer Only) */}
                 {currentUser?.role !== 'delegate' && (
-                  <div className="border border-zinc-800 bg-zinc-900/10 p-5 rounded-xl space-y-4">
-                    <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-zinc-400" />
+                  <div className="border border-vanilla-dark bg-white/10 p-8 rounded-2xl space-y-6">
+                    <div className="flex items-center justify-between border-b border-vanilla-dark/80 pb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-cherry-light flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-cherry-light" />
                         Weekly Security & Spending Digest
                       </h3>
-                      <span className="px-2 py-0.5 text-[9px] font-bold bg-zinc-900 border border-zinc-800 text-zinc-400 rounded">
+                      <span className="px-2 py-0.5 text-[9px] font-bold bg-white border border-vanilla-dark shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 text-cherry-light rounded">
                         Generated {new Date().toLocaleDateString()}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-6">
                       {/* Spending Progress Bar */}
-                      <div className="p-3 bg-zinc-900/30 border border-zinc-800/60 rounded-lg flex flex-col justify-between">
+                      <div className="p-3 bg-white/30 border border-vanilla-dark/60 rounded-2xl flex flex-col justify-between">
                         <div>
                           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Monthly Delegated Spend</span>
                           <span className="text-lg font-bold text-zinc-200 mt-1 block">${totalMonthlySpend.toFixed(2)}</span>
                           <span className="text-[10px] text-zinc-500 block mt-0.5">Total across all pay_bills grants.</span>
                         </div>
                         <div className="mt-3">
-                          <div className="w-full bg-zinc-950 h-1.5 rounded-full overflow-hidden border border-zinc-800">
+                          <div className="w-full bg-vanilla h-1.5 rounded-full overflow-hidden border border-vanilla-dark">
                             <div 
                               className="bg-zinc-100 h-full transition-all duration-300"
                               style={{ width: `${Math.min((totalMonthlySpend / 2000) * 100, 100)}%` }}
@@ -1368,20 +1392,20 @@ export default function App() {
                       </div>
 
                       {/* Urgency Alerts */}
-                      <div className="p-3 bg-zinc-900/30 border border-zinc-800/60 rounded-lg flex flex-col justify-between space-y-2">
+                      <div className="p-3 bg-white/30 border border-vanilla-dark/60 rounded-2xl flex flex-col justify-between space-y-2">
                         <div>
                           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Policy & Boundary Alerts</span>
                         </div>
                         <div className="space-y-2 overflow-y-auto max-h-24 pr-1">
                           {expiringGrants.length === 0 && deniedAttempts.length === 0 && flaggedAnomalies.length === 0 ? (
-                            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium py-2">
+                            <div className="flex items-center gap-1.5 text-xs text-cherry font-medium py-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                               <span>All active bounds are secure. No anomalies.</span>
                             </div>
                           ) : (
                             <>
                               {expiringGrants.map(eg => (
-                                <div key={eg._id} className="p-1.5 bg-amber-950/20 border border-amber-500/20 text-amber-400 rounded text-[10px] flex items-center justify-between">
+                                <div key={eg._id} className="p-1.5 bg-amber-950/20 border border-amber-500/20 text-cherry-light rounded text-[10px] flex items-center justify-between">
                                   <span>Grant ({eg.domain}) expires soon</span>
                                   <button 
                                     onClick={() => handleRenewGrant(eg._id)}
@@ -1397,7 +1421,7 @@ export default function App() {
                                     <span>⚠️ ANOMALY ALERT</span>
                                     <span>{new Date(an.timestamp).toLocaleDateString()}</span>
                                   </div>
-                                  <span className="text-zinc-400 mt-0.5 leading-normal">
+                                  <span className="text-cherry-light mt-0.5 leading-normal">
                                     {an.anomalyReason} (Actor: {getMemberName(an.actorId)})
                                   </span>
                                 </div>
@@ -1408,7 +1432,7 @@ export default function App() {
                                     <span>Guardian Blocked Event</span>
                                     <span>{new Date(da.timestamp).toLocaleDateString()}</span>
                                   </div>
-                                  <span className="text-zinc-400 mt-0.5 truncate">{da.target}</span>
+                                  <span className="text-cherry-light mt-0.5 truncate">{da.target}</span>
                                 </div>
                               ))}
                             </>
@@ -1420,19 +1444,19 @@ export default function App() {
                 )}
 
                 {/* Simulated Balances Summary */}
-                <div className="border border-zinc-800 bg-zinc-900/10 rounded-xl p-5 space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Scoped Bank Accounts</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="border border-vanilla-dark bg-white/10 rounded-2xl p-8 space-y-6">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-cherry-light">Scoped Bank Accounts</h3>
+                  <div className="grid grid-cols-2 gap-6">
                     {accounts.map(acc => (
-                      <div key={acc.id} className="p-3 bg-zinc-900/40 border border-zinc-800 rounded-lg flex justify-between items-center">
+                      <div key={acc.id} className="p-3 bg-white/40 border border-vanilla-dark rounded-2xl flex justify-between items-center">
                         <div>
-                          <h4 className="text-xs font-bold text-zinc-300">{acc.institution}</h4>
+                          <h4 className="text-xs font-bold text-cherry-light">{acc.institution}</h4>
                           <span className="text-[10px] text-zinc-500">{acc.accountName}</span>
                         </div>
                         {currentUser?.role === 'delegate' ? (
                           <button
                             onClick={() => handleViewBalanceClick(acc.id, acc.domain)}
-                            className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-300 rounded text-xs font-medium cursor-pointer"
+                            className="px-2.5 py-1 bg-white hover:bg-vanilla-dark border border-vanilla-dark hover:border-cherry-light/20 text-cherry-light rounded text-xs font-medium cursor-pointer"
                           >
                             View Balance
                           </button>
@@ -1446,15 +1470,15 @@ export default function App() {
 
                 {/* Recent Event Log Section */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Recent Audit Logs</h3>
-                  <div className="border border-zinc-800 rounded-lg divide-y divide-zinc-800 overflow-hidden bg-zinc-900/10">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-cherry-light">Recent Audit Logs</h3>
+                  <div className="border border-vanilla-dark rounded-2xl divide-y divide-zinc-800 overflow-hidden bg-white/10">
                     {auditLogs.slice(0, 4).map(log => (
-                      <div key={log._id} className="p-3 text-xs flex justify-between items-center gap-4">
+                      <div key={log._id} className="p-3 text-xs flex justify-between items-center gap-6">
                         <div className="flex items-center gap-2.5">
-                          <span className="px-1.5 py-0.5 text-[9px] font-mono border border-zinc-800 text-zinc-400 rounded uppercase">
+                          <span className="px-1.5 py-0.5 text-[9px] font-mono border border-vanilla-dark text-cherry-light rounded uppercase">
                             {log.actionType}
                           </span>
-                          <span className="text-zinc-300">{log.target}</span>
+                          <span className="text-cherry-light">{log.target}</span>
                         </div>
                         <span className="text-zinc-500 text-[10px]">{new Date(log.timestamp).toLocaleTimeString()}</span>
                       </div>
@@ -1469,8 +1493,8 @@ export default function App() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h2 className="text-xl font-semibold text-zinc-100 tracking-tight">Oversight Boundaries</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Manage, approve, or revoke time-boxed delegations of access.</p>
+                    <h2 className="text-xl font-semibold text-cherry-dark tracking-tight">Oversight Boundaries</h2>
+                    <p className="text-xs text-cherry-light mt-1">Manage, approve, or revoke time-boxed delegations of access.</p>
                   </div>
                   {currentUser?.role === 'parent' && (
                     <button
@@ -1479,7 +1503,7 @@ export default function App() {
                         setNewGrantDelegate(firstDelegate ? firstDelegate.id : '');
                         setShowCreateGrant(true);
                       }}
-                      className="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-semibold rounded-lg text-xs cursor-pointer shadow-sm transition-clean"
+                      className="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-semibold rounded-2xl text-xs cursor-pointer shadow-sm transition-clean"
                     >
                       New Delegation
                     </button>
@@ -1488,19 +1512,19 @@ export default function App() {
 
                 {/* Create Grant Form modal/panel */}
                 {showCreateGrant && (
-                  <form onSubmit={handleCreateGrant} className="border border-zinc-800 bg-zinc-900/30 p-5 rounded-xl space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-zinc-800">
+                  <form onSubmit={handleCreateGrant} className="border border-vanilla-dark bg-white/30 p-8 rounded-2xl space-y-6">
+                    <div className="flex justify-between items-center pb-2 border-b border-vanilla-dark">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-200">Configure Delegation</h3>
-                      <button type="button" onClick={() => setShowCreateGrant(false)} className="text-xs text-zinc-500 hover:text-zinc-300">Cancel</button>
+                      <button type="button" onClick={() => setShowCreateGrant(false)} className="text-xs text-zinc-500 hover:text-cherry-light">Cancel</button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Delegate</label>
+                        <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Delegate</label>
                         <select
                           value={newGrantDelegate}
                           onChange={e => setNewGrantDelegate(e.target.value)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                           required
                         >
                           <option value="">Select a delegate...</option>
@@ -1513,11 +1537,11 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Category / Domain</label>
+                        <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Category / Domain</label>
                         <select
                           value={newGrantDomain}
                           onChange={e => setNewGrantDomain(e.target.value as any)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                         >
                           <option value="financial">Financial (Balance & Bills)</option>
                           <option value="medical">Medical Portal</option>
@@ -1527,13 +1551,13 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Access Scope</label>
+                        <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Access Scope</label>
                         <select
                           value={newGrantScope}
                           onChange={e => setNewGrantScope(e.target.value as any)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                         >
                           <option value="view_only">View Only</option>
                           <option value="pay_bills">Pay Bills & Expenses</option>
@@ -1542,11 +1566,11 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Duration</label>
+                        <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Duration</label>
                         <select
                           value={newGrantExpiryMonths}
                           onChange={e => setNewGrantExpiryMonths(e.target.value)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                         >
                           <option value="1">1 Month (Short-term)</option>
                           <option value="3">3 Months (Standard)</option>
@@ -1556,44 +1580,44 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Single Transaction Cap ($)</label>
+                        <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Single Transaction Cap ($)</label>
                         <input
                           type="number"
                           value={newGrantTxCap}
                           onChange={e => setNewGrantTxCap(e.target.value)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                           min="0"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Monthly Cumulative Cap ($)</label>
+                        <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Monthly Cumulative Cap ($)</label>
                         <input
                           type="number"
                           value={newGrantMonthlyCap}
                           onChange={e => setNewGrantMonthlyCap(e.target.value)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                           min="0"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Justification Reason</label>
+                      <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Justification Reason</label>
                       <textarea
                         value={newGrantReason}
                         onChange={e => setNewGrantReason(e.target.value)}
                         placeholder="Purpose of delegating access"
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300 h-16 resize-none"
+                        className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light h-16 resize-none"
                         required
                       ></textarea>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full py-2 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs transition-clean cursor-pointer"
+                      className="w-full py-2 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-2xl text-xs transition-clean cursor-pointer"
                     >
                       Authorize & Sign Grant
                     </button>
@@ -1601,10 +1625,10 @@ export default function App() {
                 )}
 
                 {/* Grants Table / Grid */}
-                <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-900/10">
+                <div className="border border-vanilla-dark rounded-2xl overflow-hidden bg-white/10">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-zinc-800 bg-zinc-900/30 text-zinc-400 font-medium">
+                      <tr className="border-b border-vanilla-dark bg-white/30 text-cherry-light font-medium">
                         <th className="p-3">Delegate</th>
                         <th className="p-3">Domain</th>
                         <th className="p-3">Scope</th>
@@ -1623,20 +1647,20 @@ export default function App() {
                         </tr>
                       ) : (
                         grants.map(grant => (
-                          <tr key={grant._id} className="hover:bg-zinc-900/20">
+                          <tr key={grant._id} className="hover:bg-white/20">
                             <td className="p-3 font-semibold text-zinc-200">{getMemberName(grant.delegateId)}</td>
                             <td className="p-3">
-                              <div className="flex items-center gap-1.5 capitalize text-zinc-300">
+                              <div className="flex items-center gap-1.5 capitalize text-cherry-light">
                                 {getDomainIcon(grant.domain)}
                                 <span>{grant.domain}</span>
                               </div>
                             </td>
                             <td className="p-3">{getScopeBadge(grant.scope)}</td>
-                            <td className="p-3 font-mono text-[11px] text-zinc-400">
+                            <td className="p-3 font-mono text-[11px] text-cherry-light">
                               {grant.transactionCap > 0 ? `$${grant.transactionCap} tx` : 'Unlimited'}<br/>
                               {grant.monthlyCap > 0 ? `$${grant.monthlyCap}/mo` : 'Unlimited'}
                             </td>
-                            <td className="p-3 text-zinc-400">{new Date(grant.expiresAt).toLocaleDateString()}</td>
+                            <td className="p-3 text-cherry-light">{new Date(grant.expiresAt).toLocaleDateString()}</td>
                             <td className="p-3">{getStatusBadge(grant.status)}</td>
                             {currentUser?.role === 'parent' && (
                               <td className="p-3 text-right">
@@ -1650,7 +1674,7 @@ export default function App() {
                                 ) : (
                                   <button
                                     onClick={() => handleRenewGrant(grant._id)}
-                                    className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-medium rounded text-[10px] transition-clean cursor-pointer"
+                                    className="px-2 py-1 bg-white hover:bg-vanilla-dark border border-vanilla-dark text-cherry-light font-medium rounded text-[10px] transition-clean cursor-pointer"
                                   >
                                     Renew
                                   </button>
@@ -1670,13 +1694,13 @@ export default function App() {
             {activeTab === 'escalations' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-zinc-100 tracking-tight">Scope Upgrades Quorum</h2>
-                  <p className="text-xs text-zinc-400 mt-1">Review and sign off on requested delegation upgrades from co-signers.</p>
+                  <h2 className="text-xl font-semibold text-cherry-dark tracking-tight">Scope Upgrades Quorum</h2>
+                  <p className="text-xs text-cherry-light mt-1">Review and sign off on requested delegation upgrades from co-signers.</p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {escalations.filter(e => e.status === 'pending').length === 0 ? (
-                    <div className="border border-zinc-800 p-8 rounded-xl text-center text-zinc-500 text-xs">
+                    <div className="border border-vanilla-dark p-8 rounded-2xl text-center text-zinc-500 text-xs">
                       No pending upgrades waiting for signatures.
                     </div>
                   ) : (
@@ -1686,50 +1710,50 @@ export default function App() {
                         const hasVoted = currentUser ? req.approvals.some(a => a.userId === currentUser.id) : false;
 
                         return (
-                          <div key={req._id} className="border border-zinc-800 bg-zinc-900/10 p-5 rounded-xl space-y-4">
+                          <div key={req._id} className="border border-vanilla-dark bg-white/10 p-8 rounded-2xl space-y-6">
                             <div className="flex justify-between items-start">
                               <div>
                                 <span className="px-2 py-0.5 text-[9px] font-bold border border-indigo-900/30 bg-indigo-950/10 text-indigo-400 rounded uppercase">Quorum Audit Required</span>
                                 <h4 className="text-sm font-semibold text-zinc-200 mt-2">
                                   Operator Upgrading: {getMemberName(req.requestedBy)}
                                 </h4>
-                                 <p className="text-xs text-zinc-400 mt-1">
+                                 <p className="text-xs text-cherry-light mt-1">
                                   Requests access upgrade to: <span className="font-semibold text-zinc-200">
                                     {req.requestedScope === 'full_manage' ? 'Full Control' : req.requestedScope === 'pay_bills' ? 'Pay Bills' : 'View Only'}
                                   </span>
                                 </p>
                               </div>
-                              <span className="text-xs font-mono text-zinc-400">
+                              <span className="text-xs font-mono text-cherry-light">
                                 Signatures: {req.approvals.filter(a => a.decision === 'approved').length} / {req.approversRequired}
                               </span>
                             </div>
 
-                            <div className="p-3 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-300 italic">
+                            <div className="p-3 bg-vanilla border border-vanilla-dark rounded-2xl text-xs text-cherry-light italic">
                               "{req.justification}"
                             </div>
 
                             {/* Sign inputs */}
                             {currentUser && (currentUser.role === 'co_signer' || currentUser.role === 'parent') && (
-                              <div className="space-y-3 pt-3 border-t border-zinc-800/80">
+                              <div className="space-y-3 pt-3 border-t border-vanilla-dark/80">
                                 <input
                                   type="text"
                                   placeholder="Sign note / comment (optional)"
                                   value={approvalNotes[req._id] || ''}
                                   onChange={e => setApprovalNotes(prev => ({ ...prev, [req._id]: e.target.value }))}
-                                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                                  className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                                 />
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => handleApproveEscalation(req._id, 'approved')}
                                     disabled={hasVoted}
-                                    className="flex-1 py-1.5 bg-zinc-50 hover:bg-zinc-200 disabled:opacity-50 text-zinc-950 font-bold rounded-lg text-xs transition-clean cursor-pointer"
+                                    className="flex-1 py-1.5 bg-zinc-50 hover:bg-zinc-200 disabled:opacity-50 text-zinc-950 font-bold rounded-2xl text-xs transition-clean cursor-pointer"
                                   >
                                     {hasVoted ? 'Signed & Signed' : 'Sign and Approve'}
                                   </button>
                                   <button
                                     onClick={() => handleApproveEscalation(req._id, 'denied')}
                                     disabled={hasVoted}
-                                    className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 border border-zinc-800 text-red-400 hover:text-red-300 font-bold rounded-lg text-xs transition-clean cursor-pointer"
+                                    className="px-4 py-1.5 bg-white hover:bg-vanilla-dark disabled:opacity-50 border border-vanilla-dark text-red-400 hover:text-red-300 font-bold rounded-2xl text-xs transition-clean cursor-pointer"
                                   >
                                     Block
                                   </button>
@@ -1745,17 +1769,17 @@ export default function App() {
                 {/* History list */}
                 {escalations.filter(e => e.status !== 'pending').length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Escalation Decisions History</h3>
-                    <div className="border border-zinc-800 rounded-lg divide-y divide-zinc-800 overflow-hidden bg-zinc-900/10">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-cherry-light">Escalation Decisions History</h3>
+                    <div className="border border-vanilla-dark rounded-2xl divide-y divide-zinc-800 overflow-hidden bg-white/10">
                       {escalations
                         .filter(e => e.status !== 'pending')
                         .map(h => (
                           <div key={h._id} className="p-3 text-xs flex justify-between items-center">
                             <div>
-                              <span className="font-semibold text-zinc-300">{getMemberName(h.requestedBy)}</span>
+                              <span className="font-semibold text-cherry-light">{getMemberName(h.requestedBy)}</span>
                               <span className="text-zinc-500"> upgraded to {h.requestedScope === 'full_manage' ? 'Full Control' : h.requestedScope === 'pay_bills' ? 'Pay Bills' : 'View Only'}</span>
                             </div>
-                            <span className={`font-bold ${h.status === 'approved' ? 'text-emerald-400' : 'text-red-400'}`}>
+                            <span className={`font-bold ${h.status === 'approved' ? 'text-cherry' : 'text-red-400'}`}>
                               {h.status.toUpperCase()}
                             </span>
                           </div>
@@ -1771,20 +1795,20 @@ export default function App() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h2 className="text-xl font-semibold text-zinc-100 tracking-tight">Audit Ledger</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Cryptographically hash-chained trail of all access checks and database mutations.</p>
+                    <h2 className="text-xl font-semibold text-cherry-dark tracking-tight">Audit Ledger</h2>
+                    <p className="text-xs text-cherry-light mt-1">Cryptographically hash-chained trail of all access checks and database mutations.</p>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={handleDownloadPDF}
-                      className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs font-semibold cursor-pointer transition-clean flex items-center gap-1.5"
+                      className="px-2.5 py-1.5 bg-white hover:bg-vanilla-dark border border-vanilla-dark text-cherry-light rounded-2xl text-xs font-semibold cursor-pointer transition-clean flex items-center gap-1.5"
                     >
                       <Download className="w-3.5 h-3.5" />
                       PDF Report
                     </button>
                     <button
                       onClick={handleDownloadCSV}
-                      className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs font-semibold cursor-pointer transition-clean flex items-center gap-1.5"
+                      className="px-2.5 py-1.5 bg-white hover:bg-vanilla-dark border border-vanilla-dark text-cherry-light rounded-2xl text-xs font-semibold cursor-pointer transition-clean flex items-center gap-1.5"
                     >
                       <FileSpreadsheet className="w-3.5 h-3.5" />
                       CSV File
@@ -1793,15 +1817,15 @@ export default function App() {
                 </div>
 
                 {/* Validation Actions */}
-                <div className="border border-zinc-800 bg-zinc-900/10 p-4 rounded-xl flex items-center justify-between gap-4">
+                <div className="border border-vanilla-dark bg-white/10 p-6 rounded-2xl flex items-center justify-between gap-6">
                   <div className="text-xs">
-                    <h4 className="font-bold text-zinc-300">Run Chain Guard Integrity Analysis</h4>
+                    <h4 className="font-bold text-cherry-light">Run Chain Guard Integrity Analysis</h4>
                     <p className="text-zinc-500 mt-0.5">Recalculate SHA-256 links from block genesis forward to check for manual tampering.</p>
                   </div>
                   <button
                     onClick={handleVerifyChain}
                     disabled={verifyingChain}
-                    className="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs transition-clean cursor-pointer flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-2xl text-xs transition-clean cursor-pointer flex items-center gap-1.5"
                   >
                     {verifyingChain ? (
                       <>
@@ -1815,14 +1839,14 @@ export default function App() {
                 </div>
 
                 {chainValid !== null && (
-                  <div className={`p-4 rounded-xl border text-xs flex items-center gap-2 ${
+                  <div className={`p-6 rounded-2xl border text-xs flex items-center gap-2 ${
                     chainValid
-                      ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-400'
+                      ? 'bg-emerald-950/20 border-emerald-500/20 text-cherry'
                       : 'bg-red-950/20 border-red-500/20 text-red-400'
                   }`}>
                     {chainValid ? (
                       <>
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <CheckCircle2 className="w-4 h-4 text-cherry" />
                         <span>Audit Chain Validated: All hash chains are cryptographically sound.</span>
                       </>
                     ) : (
@@ -1843,7 +1867,7 @@ export default function App() {
                       placeholder="Search description, operator..."
                       value={auditSearch}
                       onChange={e => setAuditSearch(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300 font-sans"
+                      className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light font-sans"
                     />
                   </div>
                   <div>
@@ -1851,10 +1875,10 @@ export default function App() {
                     <select
                       value={auditActorFilter}
                       onChange={e => setAuditActorFilter(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                      className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                     >
                       <option value="all">All Operators</option>
-                      <option value="SYSTEM">System Chain Guard</option>
+                      <option value="SYSTEM">System Security</option>
                       {familyMembers.map(m => (
                         <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
@@ -1865,7 +1889,7 @@ export default function App() {
                     <select
                       value={auditActionFilter}
                       onChange={e => setAuditActionFilter(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                      className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                     >
                       <option value="all">All Actions</option>
                       <option value="viewed_balance">Viewed Balance</option>
@@ -1881,10 +1905,10 @@ export default function App() {
                 </div>
 
                 {/* Audit logs table */}
-                <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-900/10">
+                <div className="border border-vanilla-dark rounded-2xl overflow-hidden bg-white/10">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-zinc-800 bg-zinc-900/30 text-zinc-400 font-medium">
+                      <tr className="border-b border-vanilla-dark bg-white/30 text-cherry-light font-medium">
                         <th className="p-3">Time</th>
                         <th className="p-3">Action</th>
                         <th className="p-3">Operator</th>
@@ -1923,14 +1947,14 @@ export default function App() {
                         }
 
                         return filteredLogs.map(log => (
-                          <tr key={log._id} className="hover:bg-zinc-900/20">
+                          <tr key={log._id} className="hover:bg-white/20">
                             <td className="p-3 text-zinc-500 whitespace-nowrap">{new Date(log.timestamp).toLocaleTimeString()}</td>
                             <td className="p-3 font-sans font-medium">
                               <div className="flex flex-col gap-1 items-start">
                                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
                                   log.actionType.includes('denied')
                                     ? 'border-red-950/20 bg-red-950/10 text-red-400'
-                                    : 'border-zinc-800 bg-zinc-900 text-zinc-300'
+                                    : 'border-vanilla-dark bg-white text-cherry-light'
                                 }`}>
                                    {log.actionType.replace('_', ' ')}
                                  </span>
@@ -1941,10 +1965,10 @@ export default function App() {
                                  )}
                               </div>
                             </td>
-                            <td className="p-3 font-sans text-zinc-300">{getMemberName(log.actorId)}</td>
+                            <td className="p-3 font-sans text-cherry-light">{getMemberName(log.actorId)}</td>
                             <td className="p-3 font-sans text-zinc-200">
                               <div>{log.target}</div>
-                              {log.amount !== null && <span className="font-mono font-bold text-zinc-300 block mt-0.5">${log.amount.toFixed(2)}</span>}
+                              {log.amount !== null && <span className="font-mono font-bold text-cherry-light block mt-0.5">${log.amount.toFixed(2)}</span>}
                               {(log as any).isAnomaly && (log as any).anomalyReason && (
                                 <div className="text-[10px] text-red-400 mt-1.5 bg-red-950/10 border border-red-900/10 p-1.5 rounded leading-normal">
                                   <strong>Alert:</strong> {(log as any).anomalyReason}
@@ -1965,35 +1989,35 @@ export default function App() {
             {activeTab === 'sandbox' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-zinc-100 tracking-tight">Simulated Institution Sandbox</h2>
-                  <p className="text-xs text-zinc-400 mt-1">Simulate delegate logins and attempt balance lookups or payment requests.</p>
+                  <h2 className="text-xl font-semibold text-cherry-dark tracking-tight">Simulated Institution Sandbox</h2>
+                  <p className="text-xs text-cherry-light mt-1">Simulate delegate logins and attempt balance lookups or payment requests.</p>
                 </div>
 
                 {/* Scope info banner */}
-                <div className="p-4 border border-zinc-800 bg-zinc-900/20 rounded-xl space-y-2">
+                <div className="p-6 border border-vanilla-dark bg-white/20 rounded-2xl space-y-2">
                   <div className="flex gap-3">
-                    <Shield className="w-5 h-5 text-zinc-400 mt-0.5 flex-shrink-0" />
+                    <Shield className="w-5 h-5 text-cherry-light mt-0.5 flex-shrink-0" />
                     <div className="text-xs">
                       <h4 className="font-bold text-zinc-200">Guardian Gate — Domain-Scoped Enforcement</h4>
-                      <p className="mt-1 text-zinc-400 leading-relaxed">
-                        Each bill and account belongs to a <strong className="text-zinc-300">domain</strong> (Financial, Household, Medical). Priya can only interact with items whose domain matches an active grant she holds. Bills are automatically labelled with their domain below.
+                      <p className="mt-1 text-cherry-light leading-relaxed">
+                        Each bill and account belongs to a <strong className="text-cherry-light">domain</strong> (Financial, Household, Medical). Priya can only interact with items whose domain matches an active grant she holds. Bills are automatically labelled with their domain below.
                       </p>
                     </div>
                   </div>
                   <div className="ml-8 flex gap-3 flex-wrap text-[10px] font-medium">
                     <span className="px-2 py-1 rounded border border-blue-900/30 bg-blue-950/10 text-blue-400">Financial grant → Financial bills</span>
                     <span className="px-2 py-1 rounded border border-violet-900/30 bg-violet-950/10 text-violet-400">Household grant → Household bills</span>
-                    <span className="px-2 py-1 rounded border border-emerald-900/30 bg-emerald-950/10 text-emerald-400">Medical grant → Medical bills</span>
+                    <span className="px-2 py-1 rounded border border-emerald-900/30 bg-emerald-950/10 text-cherry">Medical grant → Medical bills</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   {/* Accounts Column */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Bank Accounts</h3>
+                  <div className="space-y-6">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-cherry-light">Bank Accounts</h3>
                     <div className="space-y-3">
                       {accounts.map(acc => (
-                        <div key={acc.id} className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl space-y-3">
+                        <div key={acc.id} className="p-6 bg-white/40 border border-vanilla-dark rounded-2xl space-y-3">
                           <div className="flex justify-between items-start">
                             <div>
                               <h4 className="text-xs font-bold text-zinc-200">{acc.institution}</h4>
@@ -2001,17 +2025,17 @@ export default function App() {
                             </div>
                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border capitalize ${
                               acc.domain === 'financial' ? 'border-blue-900/30 bg-blue-950/10 text-blue-400'
-                              : acc.domain === 'medical' ? 'border-emerald-900/30 bg-emerald-950/10 text-emerald-400'
+                              : acc.domain === 'medical' ? 'border-emerald-900/30 bg-emerald-950/10 text-cherry'
                               : 'border-violet-900/30 bg-violet-950/10 text-violet-400'
                             }`}>{acc.domain}</span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold font-mono text-zinc-400">
+                            <span className="text-xs font-bold font-mono text-cherry-light">
                               {currentUser?.role === 'delegate' ? '••••••' : `$${acc.balance.toFixed(2)}`}
                             </span>
                             <button
                               onClick={() => handleViewBalanceClick(acc.id, acc.domain)}
-                              className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded text-xs font-medium cursor-pointer"
+                              className="px-2.5 py-1 bg-white hover:bg-vanilla-dark border border-vanilla-dark text-cherry-light rounded text-xs font-medium cursor-pointer"
                             >
                               View Balance
                             </button>
@@ -2021,9 +2045,9 @@ export default function App() {
                     </div>
 
                     {/* Add Custom Expense Form */}
-                    <div className="border border-zinc-800 bg-zinc-900/10 p-4 rounded-xl space-y-3 mt-4">
-                      <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <Plus className="w-3.5 h-3.5 text-zinc-400" />
+                    <div className="border border-vanilla-dark bg-white/10 p-6 rounded-2xl space-y-3 mt-4">
+                      <h4 className="text-xs font-bold text-cherry-light uppercase tracking-wider flex items-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5 text-cherry-light" />
                         Add Custom Payee / Expense
                       </h4>
                       <p className="text-[10px] text-zinc-500 leading-normal">
@@ -2038,7 +2062,7 @@ export default function App() {
                               placeholder="e.g. Acme Corp"
                               value={newPayeeName}
                               onChange={e => setNewPayeeName(e.target.value)}
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-1.5 text-[11px] text-zinc-300 font-sans"
+                              className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-1.5 text-[11px] text-cherry-light font-sans"
                               required
                             />
                           </div>
@@ -2049,7 +2073,7 @@ export default function App() {
                               placeholder="e.g. 150"
                               value={newPayeeAmount}
                               onChange={e => setNewPayeeAmount(e.target.value)}
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-1.5 text-[11px] text-zinc-300 font-sans"
+                              className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-1.5 text-[11px] text-cherry-light font-sans"
                               required
                             />
                           </div>
@@ -2060,7 +2084,7 @@ export default function App() {
                             <select
                               value={newPayeeDomain}
                               onChange={e => setNewPayeeDomain(e.target.value)}
-                              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg p-1.5 text-[11px] text-zinc-300"
+                              className="flex-1 bg-vanilla border border-vanilla-dark rounded-2xl p-1.5 text-[11px] text-cherry-light"
                             >
                               <option value="household">Household Domain</option>
                               <option value="medical">Medical Domain</option>
@@ -2069,7 +2093,7 @@ export default function App() {
                             </select>
                             <button
                               type="submit"
-                              className="px-4 py-1.5 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs transition-clean cursor-pointer whitespace-nowrap"
+                              className="px-4 py-1.5 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-2xl text-xs transition-clean cursor-pointer whitespace-nowrap"
                             >
                               Add Payee
                             </button>
@@ -2080,29 +2104,29 @@ export default function App() {
                   </div>
 
                   {/* Bills Column */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Pending Bills</h3>
+                  <div className="space-y-6">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-cherry-light">Pending Bills</h3>
                     <div className="space-y-3">
                       {bills.map(bill => (
-                        <div key={bill.id} className={`p-4 bg-zinc-900/40 border rounded-xl space-y-3 ${
-                          bill.status === 'paid' ? 'border-zinc-800/40 opacity-60' : 'border-zinc-800'
+                        <div key={bill.id} className={`p-6 bg-white/40 border rounded-2xl space-y-3 ${
+                          bill.status === 'paid' ? 'border-vanilla-dark/40 opacity-60' : 'border-vanilla-dark'
                         }`}>
                           <div className="flex justify-between items-start">
                             <div>
                               <h4 className="text-xs font-bold text-zinc-200">{bill.payee}</h4>
                               <span className="text-[10px] text-zinc-500">Due: {new Date(bill.dueDate).toLocaleDateString()}</span>
                             </div>
-                            <span className="text-xs font-mono font-bold text-zinc-100">${bill.amount.toFixed(2)}</span>
+                            <span className="text-xs font-mono font-bold text-cherry-dark">${bill.amount.toFixed(2)}</span>
                           </div>
 
-                          <div className="flex justify-between items-center pt-2 border-t border-zinc-800/50">
+                          <div className="flex justify-between items-center pt-2 border-t border-vanilla-dark/50">
                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border capitalize ${
                               bill.domain === 'financial' ? 'border-blue-900/30 bg-blue-950/10 text-blue-400'
-                              : bill.domain === 'medical' ? 'border-emerald-900/30 bg-emerald-950/10 text-emerald-400'
+                              : bill.domain === 'medical' ? 'border-emerald-900/30 bg-emerald-950/10 text-cherry'
                               : 'border-violet-900/30 bg-violet-950/10 text-violet-400'
                             }`}>{bill.domain} domain</span>
                             {bill.status === 'paid' ? (
-                              <span className="px-2 py-0.5 text-[10px] font-bold border border-emerald-900/30 bg-emerald-950/20 text-emerald-400 rounded">
+                              <span className="px-2 py-0.5 text-[10px] font-bold border border-emerald-900/30 bg-emerald-950/20 text-cherry rounded">
                                 Paid
                               </span>
                             ) : (
@@ -2122,9 +2146,9 @@ export default function App() {
 
                 {/* Initiate Escalation launcher */}
                 {currentUser?.role === 'delegate' && (
-                  <div className="border border-zinc-800 bg-zinc-900/10 p-5 rounded-xl text-center space-y-3 max-w-md mx-auto">
+                  <div className="border border-vanilla-dark bg-white/10 p-8 rounded-2xl text-center space-y-3 max-w-md mx-auto">
                     <h4 className="text-xs font-bold text-zinc-200">Request Scope Escalation Upgrade</h4>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    <p className="text-[11px] text-cherry-light leading-relaxed">
                       Need permission to pay expenses or manage accounts? Submit a time-boxed request to sibling co-signers.
                     </p>
                     <button
@@ -2137,7 +2161,7 @@ export default function App() {
                         setEscalateGrantId(active[0]._id);
                         setShowEscalationModal(true);
                       }}
-                      className="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs cursor-pointer transition-clean"
+                      className="px-3 py-1.5 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-2xl text-xs cursor-pointer transition-clean"
                     >
                       Request Scope Escalation
                     </button>
@@ -2146,19 +2170,19 @@ export default function App() {
 
                 {/* Escalation launcher modal */}
                 {showEscalationModal && (
-                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-                    <form onSubmit={handleRequestEscalation} className="w-full max-w-md border border-zinc-800 bg-zinc-900 p-6 rounded-xl space-y-4">
-                      <div className="flex justify-between items-center pb-2 border-b border-zinc-800">
+                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50">
+                    <form onSubmit={handleRequestEscalation} className="w-full max-w-md border border-vanilla-dark bg-white p-6 rounded-2xl space-y-6">
+                      <div className="flex justify-between items-center pb-2 border-b border-vanilla-dark">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-200">Escalate Delegation Scope</h3>
-                        <button type="button" onClick={() => setShowEscalationModal(false)} className="text-xs text-zinc-500 hover:text-zinc-300">Close</button>
+                        <button type="button" onClick={() => setShowEscalationModal(false)} className="text-xs text-zinc-500 hover:text-cherry-light">Close</button>
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Target Grant (Domain)</label>
+                        <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Target Grant (Domain)</label>
                         <select
                           value={escalateGrantId}
                           onChange={e => setEscalateGrantId(e.target.value)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                           required
                         >
                           {grants.map(g => {
@@ -2183,11 +2207,11 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Requested Scope Level</label>
+                        <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Requested Scope Level</label>
                         <select
                           value={escalateScope}
                           onChange={e => setEscalateScope(e.target.value as any)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light"
                         >
                           <option value="pay_bills">Pay Bills & Expenses</option>
                           <option value="full_manage">Full Control</option>
@@ -2195,19 +2219,19 @@ export default function App() {
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Justification Reason</label>
+                        <label className="block text-[10px] font-bold text-cherry-light uppercase tracking-wider mb-1">Justification Reason</label>
                         <textarea
                           value={escalateJustification}
                           onChange={e => setEscalateJustification(e.target.value)}
                           placeholder="Justification note for siblings"
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300 h-20 resize-none"
+                          className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light h-20 resize-none"
                           required
                         ></textarea>
                       </div>
 
                       <button
                         type="submit"
-                        className="w-full py-2 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs transition-clean cursor-pointer"
+                        className="w-full py-2 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-2xl text-xs transition-clean cursor-pointer"
                       >
                         Submit Request
                       </button>
@@ -2219,35 +2243,35 @@ export default function App() {
           </main>
 
           {/* 3. RIGHT SIDE GUARDIAN VISUAL PANEL */}
-          <aside className="w-80 border-l border-zinc-800 bg-zinc-950 p-6 space-y-6 flex-shrink-0 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-zinc-400" />
+          <aside className="w-80 border-l border-vanilla-dark bg-vanilla p-6 space-y-6 flex-shrink-0 flex flex-col justify-between">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-vanilla-dark pb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-cherry-light flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-cherry-light" />
                   Guardian Shield
                 </h3>
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="text-[9px] font-mono text-emerald-400 font-semibold">ACTIVE</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-cherry/100 animate-pulse"></span>
+                  <span className="text-[9px] font-mono text-cherry font-semibold">ACTIVE</span>
                 </span>
               </div>
 
               {/* Status Display */}
-              <div className={`p-4 rounded-lg border text-xs leading-relaxed space-y-2 ${
+              <div className={`p-6 rounded-2xl border text-xs leading-relaxed space-y-2 ${
                 guardianLog.status === 'approved'
-                  ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-400'
+                  ? 'bg-emerald-950/20 border-emerald-500/20 text-cherry'
                   : guardianLog.status === 'denied'
                   ? 'bg-red-950/20 border-red-500/20 text-red-400'
-                  : 'bg-zinc-900/50 border-zinc-800 text-zinc-300'
+                  : 'bg-white/50 border-vanilla-dark text-cherry-light'
               }`}>
                 <div className="flex items-center gap-2">
-                  {guardianLog.status === 'approved' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                  {guardianLog.status === 'approved' && <CheckCircle2 className="w-4 h-4 text-cherry" />}
                   {guardianLog.status === 'denied' && <XCircle className="w-4 h-4 text-red-400" />}
-                  {guardianLog.status === 'idle' && <Shield className="w-4 h-4 text-zinc-400" />}
+                  {guardianLog.status === 'idle' && <Shield className="w-4 h-4 text-cherry-light" />}
                   <span className="font-semibold">{guardianLog.message}</span>
                 </div>
                 {guardianLog.details && (
-                  <p className="text-[11px] text-zinc-400 mt-1 border-t border-zinc-800/40 pt-1.5 leading-normal">
+                  <p className="text-[11px] text-cherry-light mt-1 border-t border-vanilla-dark/40 pt-1.5 leading-normal">
                     {guardianLog.details}
                   </p>
                 )}
@@ -2255,8 +2279,8 @@ export default function App() {
             </div>
 
             {/* Quick Developer Testing Info */}
-            <div className="border border-zinc-800 bg-zinc-900/10 p-3.5 rounded-xl text-[11px] text-zinc-500 space-y-2 leading-relaxed">
-              <span className="font-bold text-zinc-400 uppercase text-[9px] tracking-wider block">Security Rule Checker</span>
+            <div className="border border-vanilla-dark bg-white/10 p-3.5 rounded-2xl text-[11px] text-zinc-500 space-y-2 leading-relaxed">
+              <span className="font-bold text-cherry-light uppercase text-[9px] tracking-wider block">Security Rule Checker</span>
               <p>Every transaction, balance query, or configuration change is intercepted. The system enforces cryptographic validation on the data store directly.</p>
             </div>
           </aside>
@@ -2266,40 +2290,128 @@ export default function App() {
 
       {/* Action Reason Modal */}
       {reasonModalOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <form onSubmit={handleReasonSubmit} className="w-full max-w-md border border-zinc-800 bg-zinc-900 p-6 rounded-xl space-y-4 shadow-xl">
-            <div className="flex justify-between items-center pb-2 border-b border-zinc-800">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50">
+          <form onSubmit={handleReasonSubmit} className="w-full max-w-md border border-vanilla-dark bg-white p-6 rounded-2xl space-y-6 shadow-xl">
+            <div className="flex justify-between items-center pb-2 border-b border-vanilla-dark">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5" />
                 Security Justification
               </h3>
-              <button type="button" onClick={() => setReasonModalOpen(false)} className="text-xs text-zinc-500 hover:text-zinc-300">Close</button>
+              <button type="button" onClick={() => setReasonModalOpen(false)} className="text-xs text-zinc-500 hover:text-cherry-light">Close</button>
             </div>
 
-            <div className="p-3 bg-zinc-950 border border-zinc-800 rounded-lg text-[11px] text-zinc-400 space-y-1.5">
+            <div className="p-3 bg-vanilla border border-vanilla-dark rounded-2xl text-[11px] text-cherry-light space-y-1.5">
               <p><strong>Action:</strong> {reasonActionType === 'view_balance' ? 'View Balance query' : 'Pay Bill transaction'}</p>
               <p><strong>Domain:</strong> <span className="capitalize">{reasonDomain}</span></p>
               {reasonAmount !== null && <p><strong>Amount:</strong> ${reasonAmount.toFixed(2)}</p>}
             </div>
 
             <div>
-              <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Enter Reason for Access</label>
+              <label className="block text-[9px] font-bold text-cherry-light uppercase tracking-wider mb-1">Enter Reason for Access</label>
               <textarea
                 value={actionReasonText}
                 onChange={e => setActionReasonText(e.target.value)}
                 placeholder="e.g., Checking if utility payment cleared / paying PG&E bill"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-300 h-20 resize-none font-sans"
+                className="w-full bg-vanilla border border-vanilla-dark rounded-2xl p-2 text-xs text-cherry-light h-20 resize-none font-sans"
                 required
               ></textarea>
             </div>
 
             <button
               type="submit"
-              className="w-full py-2 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-lg text-xs transition-clean cursor-pointer"
+              className="w-full py-2 bg-zinc-50 hover:bg-zinc-200 text-zinc-950 font-bold rounded-2xl text-xs transition-clean cursor-pointer"
             >
               Submit Justified Request
             </button>
           </form>
+        </div>
+      )}
+      {/* Get Started Guide Modal */}
+      {showGetStarted && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-[60]">
+          <div className="w-full max-w-lg border border-cherry-light/20 bg-white p-8 rounded-2xl space-y-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-emerald-300"></div>
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-bold tracking-tight text-cherry-dark text-cherry-dark font-heading">Welcome to KeyRing</h3>
+              <button onClick={() => {
+                setShowGetStarted(false);
+                localStorage.setItem('hasSeenGetStarted', 'true');
+              }} className="text-zinc-500 hover:text-cherry-light transition-colors cursor-pointer">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-6 text-sm text-cherry-light leading-relaxed">
+              <p>KeyRing helps you safely delegate oversight of your financial and medical accounts.</p>
+              
+              <div className="grid gap-6 mt-4">
+                <div className="flex items-start gap-3 bg-vanilla/50 p-3 rounded-2xl border border-vanilla-dark">
+                  <Shield className="w-5 h-5 text-cherry mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-zinc-200">1. Create Delegations</h4>
+                    <p className="text-xs text-cherry-light mt-1">Assign family members specific roles and limits for viewing or managing accounts.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 bg-vanilla/50 p-3 rounded-2xl border border-vanilla-dark">
+                  <Activity className="w-5 h-5 text-blue-400 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-zinc-200">2. Review Activity</h4>
+                    <p className="text-xs text-cherry-light mt-1">All actions are logged in the cryptographic Audit Trail. Monitor for anomalies easily.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 bg-vanilla/50 p-3 rounded-2xl border border-vanilla-dark">
+                  <Users className="w-5 h-5 text-purple-400 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-zinc-200">3. Escalate Permissions</h4>
+                    <p className="text-xs text-cherry-light mt-1">Delegates can request more access, requiring Co-signer quorum approval.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowGetStarted(false);
+                localStorage.setItem('hasSeenGetStarted', 'true');
+              }}
+              className="w-full py-3 bg-zinc-100 hover:bg-white text-zinc-950 font-bold rounded-2xl transition-all transform active:scale-[0.98] cursor-pointer"
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* IP Detection Alert Modal */}
+      {showIpAlert && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-[60]">
+          <div className="w-full max-w-md border border-amber-500/30 bg-white p-8 rounded-2xl space-y-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-amber-300"></div>
+            
+            <div className="flex justify-center mb-2">
+              <div className="p-6 bg-cherry/50/10 rounded-full">
+                <AlertTriangle className="w-10 h-10 text-amber-500 animate-pulse" />
+              </div>
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-bold text-cherry-dark">New Login Detected</h3>
+              <p className="text-sm text-cherry-light">
+                We detected a login from a new IP address <span className="font-mono bg-vanilla-dark px-1.5 py-0.5 rounded text-cherry-light">192.168.1.100</span>.
+              </p>
+            </div>
+
+            <div className="bg-amber-950/20 border border-amber-900/30 p-3 rounded-2xl text-xs text-cherry-light/90 text-center">
+              If this was you, you can safely continue. Otherwise, review your audit logs immediately.
+            </div>
+
+            <button
+              onClick={() => setShowIpAlert(false)}
+              className="w-full py-3 bg-cherry/50 hover:bg-amber-400 text-zinc-950 font-bold rounded-2xl transition-all transform active:scale-[0.98] cursor-pointer"
+            >
+              Acknowledge & Continue
+            </button>
+          </div>
         </div>
       )}
     </div>

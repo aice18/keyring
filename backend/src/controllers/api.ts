@@ -1,8 +1,7 @@
 import { Express, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { db } from '../models/db';
-import { authMiddleware, AuthenticatedRequest, JWT_SECRET } from '../middleware/auth';
+import { authMiddleware, AuthenticatedRequest } from '../middleware/auth';
 import { IntakeAgent, GrantAgent, EscalationAgent, GuardianAgent } from '../services/AgentServices';
 import { verifyAuditChain, logAuditEvent } from '../utils/crypto';
 import { generateAuditPDF, generateAuditCSV } from '../utils/exports';
@@ -63,11 +62,7 @@ export function setupRoutes(app: Express, io: any) {
         return res.status(401).json({ message: 'Invalid credentials.' });
       }
 
-      const token = jwt.sign(
-        { id: user._id, email: user.email, role: user.role, familyId: user.familyId },
-        JWT_SECRET,
-        { expiresIn: '1d' }
-      );
+      const token = user._id.toString();
 
       return res.json({
         token,
@@ -151,11 +146,7 @@ export function setupRoutes(app: Express, io: any) {
 
       // Return the created users list and also sign in token for the parent automatically
       const createdParent = users.find(u => u.role === 'parent')!;
-      const token = jwt.sign(
-        { id: createdParent._id, email: createdParent.email, role: createdParent.role, familyId: createdParent.familyId },
-        JWT_SECRET,
-        { expiresIn: '1d' }
-      );
+      const token = createdParent._id.toString();
 
       return res.status(201).json({
         message: 'Family workspace configured successfully',

@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-
-export const JWT_SECRET = process.env.JWT_SECRET || 'keyring_secret_super_secure_auth';
+import { db } from '../models/db';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -12,7 +10,7 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+export async function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   let token = '';
 
   const authHeader = req.headers.authorization;
@@ -34,15 +32,19 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const user = await db.users.findById(token);
+    if (!user) {
+      return res.status(403).json({ message: 'Invalid or expired authentication.' });
+    }
+
     req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role,
-      familyId: decoded.familyId
+      id: token,
+      email: user.email,
+      role: user.role as any,
+      familyId: user.familyId
     };
     next();
   } catch (err) {
-    return res.status(403).json({ message: 'Invalid or expired authentication token.' });
+    return res.status(403).json({ message: 'Invalid or expired authentication.' });
   }
 }
